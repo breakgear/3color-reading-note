@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { extractHighlights, type CandidateBook } from "@/lib/ai/extract";
-import { chapterForPage, pageFromLocation, type Chapter, type InboxItem } from "@/lib/domain";
+import { bookLabel, chapterForPage, pageFromLocation, type Chapter, type InboxItem } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 
 // AIの読み取りは数十秒かかることがある
@@ -69,13 +69,13 @@ export async function POST(request: NextRequest) {
     if (dlErr || !file) throw new Error("ファイルを読み込めませんでした");
 
     const [{ data: booksData }, { data: chaptersData }] = await Promise.all([
-      supabase.from("rn_books").select("id, title, author").eq("status", "reading"),
+      supabase.from("rn_books").select("id, title, volume, author").eq("status", "reading"),
       supabase.from("rn_chapters").select("*").order("sort_order"),
     ]);
     const chapters = (chaptersData ?? []) as Chapter[];
     const books: CandidateBook[] = (booksData ?? []).map((b) => ({
       id: b.id,
-      title: b.title,
+      title: bookLabel(b),
       author: b.author,
       chapters: chapters.filter((c) => c.book_id === b.id).map((c) => c.label),
     }));
@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
       const known = books.find((b) => b.id === item.book_id);
       if (known) fixedBook = known;
       else {
-        const { data: b } = await supabase.from("rn_books").select("id, title, author").eq("id", item.book_id).maybeSingle();
-        if (b) fixedBook = { ...b, chapters: chapters.filter((c) => c.book_id === b.id).map((c) => c.label) };
+        const { data: b } = await supabase.from("rn_books").select("id, title, volume, author").eq("id", item.book_id).maybeSingle();
+        if (b) fixedBook = { id: b.id, title: bookLabel(b), author: b.author, chapters: chapters.filter((c) => c.book_id === b.id).map((c) => c.label) };
       }
     }
 

@@ -77,6 +77,10 @@ create table if not exists public.rn_highlights (
   constraint rn_confirmed_needs_book check (status = 'pending' or book_id is not null)
 );
 
+-- 巻（上・下・12 など）。あとから追加した項目なので、すでに表がある場合もここで足す
+alter table public.rn_books add column if not exists volume text
+  check (volume is null or char_length(volume) <= 20);
+
 create index if not exists rn_books_user_status_idx on public.rn_books (user_id, status);
 create index if not exists rn_chapters_book_idx on public.rn_chapters (book_id, sort_order);
 create index if not exists rn_highlights_book_idx on public.rn_highlights (book_id, status);

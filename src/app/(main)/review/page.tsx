@@ -2,10 +2,10 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { IconChevron } from "@/components/icons";
 import { saveActionResult } from "@/lib/actions/highlights";
-import { ANSWER_LABEL, COLOR_INFO, formatDate, formatLocation, type Book, type Highlight } from "@/lib/domain";
+import { ANSWER_LABEL, bookLabel, COLOR_INFO, formatDate, formatLocation, type Book, type Highlight } from "@/lib/domain";
 import { requireUser } from "@/lib/supabase/server";
 
-type H = Highlight & { books: { id: string; title: string } | null };
+type H = Highlight & { books: { id: string; title: string; volume: string | null } | null };
 
 // 1日1枚、日付で選ぶ（同じ日は同じカード。日本・シンガポール時間で日付が変わる）
 function pickToday<T>(list: T[]): T | null {
@@ -20,7 +20,7 @@ export default async function ReviewPage() {
   const [{ data: actionsData }, { data: redsData }, { data: finishedData }] = await Promise.all([
     supabase
       .from("rn_highlights")
-      .select("*, books:rn_books(id, title)")
+      .select("*, books:rn_books(id, title, volume)")
       .eq("status", "confirmed")
       .not("action", "is", null)
       .order("action_done", { ascending: true })
@@ -28,7 +28,7 @@ export default async function ReviewPage() {
       .limit(50),
     supabase
       .from("rn_highlights")
-      .select("*, books:rn_books(id, title)")
+      .select("*, books:rn_books(id, title, volume)")
       .eq("status", "confirmed")
       .eq("color", "red")
       .order("created_at", { ascending: false })
@@ -59,7 +59,7 @@ export default async function ReviewPage() {
               <p className="text-sm font-bold">これについて、今どう考える？</p>
               <p className={`pen-line ${COLOR_INFO.red.line} text-[15px] leading-[1.9]`}>{card.text}</p>
               <p className="text-xs text-sub">
-                {card.books?.title && `『${card.books.title}』`} {formatLocation(card) ?? ""}
+                {card.books && `『${bookLabel(card.books)}』`} {formatLocation(card) ?? ""}
               </p>
               {card.memo && (
                 <p className="rounded-xl bg-paper px-3 py-2 text-[13px]">
@@ -108,7 +108,7 @@ export default async function ReviewPage() {
           {finished.map((b) => (
             <Link key={b.id} href={`/books/${b.id}`} className="card flex flex-col gap-1.5 p-4">
               <span className="flex items-center gap-2">
-                <span className="flex-1 font-bold">{b.title}</span>
+                <span className="flex-1 font-bold">{bookLabel(b)}</span>
                 <IconChevron className="size-4 text-mute" />
               </span>
               <span className="text-xs text-sub">
@@ -137,7 +137,7 @@ function ActionItem({ a }: { a: H }) {
         />
         <span className="flex flex-col">
           <span className={`text-[15px] font-medium ${a.action_done ? "text-sub line-through" : ""}`}>{a.action}</span>
-          <span className="text-xs text-sub">{a.books?.title && `『${a.books.title}』`}から</span>
+          <span className="text-xs text-sub">{a.books && `『${bookLabel(a.books)}』`}から</span>
         </span>
       </label>
       <div className="flex gap-2 pl-8">

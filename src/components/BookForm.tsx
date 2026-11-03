@@ -1,15 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
-import { QUESTION_TEMPLATES, type BookFormat, type Chapter } from "@/lib/domain";
+import { bookLabel, QUESTION_TEMPLATES, sameBook, type BookFormat, type Chapter } from "@/lib/domain";
 
 type Row = { key: number; id?: string; label: string; start_page: string };
+type ExistingBook = { id: string; title: string; volume: string | null; status: "reading" | "finished" };
 
-function Submit({ label }: { label: string }) {
+function Submit({ label, blocked }: { label: string; blocked?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="btn btn-primary w-full" disabled={pending}>
+    <button type="submit" className="btn btn-primary w-full" disabled={pending || blocked}>
       {pending ? "保存中…" : label}
     </button>
   );
@@ -19,17 +21,29 @@ export function BookForm({
   action,
   submitLabel,
   defaults,
+  existing = [],
 }: {
   action: (form: FormData) => Promise<void>;
   submitLabel: string;
   defaults?: {
     title: string;
+    volume: string | null;
     author: string | null;
     format: BookFormat;
     question: string | null;
     chapters: Chapter[];
   };
+  // 登録済みの本（新しく登録するときだけ渡す。同じ書名・同じ巻の重複チェック用）
+  existing?: ExistingBook[];
 }) {
+  const [title, setTitle] = useState(defaults?.title ?? "");
+  const [volume, setVolume] = useState(defaults?.volume ?? "");
+  const [allowDup, setAllowDup] = useState(false);
+  const dup = title.trim() ? existing.find((b) => sameBook(b, { title, volume })) : undefined;
+  // 同じ書名で巻が違うもの（シリーズ）があれば、巻を入れるよう促す
+  const series = title.trim() && !volume.trim()
+    ? existing.filter((b) => b.volume && sameBook({ title: b.title }, { title }))
+    : [];
   const [question, setQuestion] = useState(defaults?.question ?? "");
   const [rows, setRows] = useState<Row[]>(
     (defaults?.chapters ?? []).map((c, i) => ({
@@ -71,8 +85,64 @@ export function BookForm({
   return (
     <form action={action} className="flex flex-col gap-5 px-4 pt-2">
       <div>
-        <label htmlFor="title" className="label">書名（必須）</label>
-        <input id="title" name="title" required maxLength={200} defaultValue={defaults?.title} className="field" />
+        <div className="flex gap-3">
+          <div className="min-w-0 flex-1">
+            <label htmlFor="title" className="label">書名（必須）</label>
+            <input
+              id="title"
+              name="title"
+              required
+              maxLength={200}
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setAllowDup(false);
+              }}
+              className="field"
+            />
+          </div>
+          <div className="w-24 shrink-0">
+            <label htmlFor="volume" className="label">巻（任意）</label>
+            <input
+              id="volume"
+              name="volume"
+              maxLength={20}
+              value={volume}
+              onChange={(e) => {
+                setVolume(e.target.value);
+                setAllowDup(false);
+              }}
+              placeholder="上・12"
+              className="field"
+            />
+          </div>
+        </div>
+        <p className="mt-1 text-xs text-sub">上巻・下巻は「上」「下」、マンガは「12」のように数字で入れます。</p>
+        {series.length > 0 && !dup && (
+          <p className="mt-2 rounded-xl bg-pen-blue-tint px-3 py-2 text-[13px] leading-relaxed text-pen-blue">
+            この本は {series.map((b) => bookLabel(b).replace(b.title, "").trim()).join("・")} が登録済みです。巻を入れてください。
+          </p>
+        )}
+        {dup && (
+          <div role="alert" className="mt-2 flex flex-col gap-2 rounded-xl bg-pen-red-tint p-3 text-[13px] leading-relaxed">
+            <p className="font-bold text-pen-red">
+              『{bookLabel(dup)}』はすでに登録されています（{dup.status === "reading" ? "読書中" : "読了"}）
+            </p>
+            <Link href={`/books/${dup.id}`} className="btn btn-ghost !min-h-10 text-sm">
+              登録済みの本を開く
+            </Link>
+            <label className="flex min-h-11 items-center gap-2 text-ink">
+              <input
+                type="checkbox"
+                name="allow_duplicate"
+                checked={allowDup}
+                onChange={(e) => setAllowDup(e.target.checked)}
+                className="size-5 accent-ink"
+              />
+              別の本として登録する（版違い・読み直しなど）
+            </label>
+          </div>
+        )}
       </div>
       <div>
         <label htmlFor="author" className="label">著者</label>
@@ -200,7 +270,7 @@ export function BookForm({
         </div>
       </details>
 
-      <Submit label={submitLabel} />
+      <Submit label={submitLabel} blocked={Boolean(dup) && !allowDup} />
     </form>
   );
 }

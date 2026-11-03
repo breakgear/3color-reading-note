@@ -1,6 +1,7 @@
 import { FinishForm } from "@/components/FinishForm";
 import { PageHeader } from "@/components/PageHeader";
 import { finishBook } from "@/lib/actions/books";
+import { bookLabel } from "@/lib/domain";
 import { getBook, getConfirmedHighlights } from "@/lib/queries";
 
 export default async function FinishPage({ params }: PageProps<"/books/[id]/finish">) {
@@ -12,7 +13,7 @@ export default async function FinishPage({ params }: PageProps<"/books/[id]/fini
   return (
     <main>
       <PageHeader title="読み終わり" backHref={`/books/${id}`} backLabel="本へ" />
-      <p className="truncate px-4 text-xs text-sub">『{book.title}』</p>
+      <p className="truncate px-4 text-xs text-sub">『{bookLabel(book)}』</p>
       <FinishForm action={finishBook.bind(null, id)} book={book} reds={reds} />
     </main>
   );

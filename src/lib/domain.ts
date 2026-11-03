@@ -57,6 +57,7 @@ export const ANSWER_LABEL: Record<AnswerStatus, string> = {
 export type Book = {
   id: string;
   title: string;
+  volume: string | null;
   author: string | null;
   format: BookFormat;
   question: string | null;
@@ -149,6 +150,50 @@ export function text(form: FormData, key: string, max = 2000): string | null {
   if (typeof v !== "string") return null;
   const t = v.trim();
   return t ? t.slice(0, max) : null;
+}
+
+// 書名の比べ方：全角半角・大文字小文字・空白・記号の違いは同じとみなす
+export function normalizeTitle(title: string): string {
+  return title
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\s　『』「」【】()（）［］\[\]・:：!！?？、。,.\-－ー〜~]/g, "");
+}
+
+// 巻の比べ方：「12」「12巻」「第12巻」「１２」は同じ。「上」「上巻」も同じ
+export function normalizeVolume(volume: string | null | undefined): string {
+  if (!volume) return "";
+  return volume.normalize("NFKC").replace(/[\s第巻]/g, "").replace(/^0+(\d)/, "$1").toLowerCase();
+}
+
+// 表示用：「12」→「12巻」、「上」→「上巻」、それ以外はそのまま
+export function volumeLabel(volume: string | null | undefined): string {
+  const v = normalizeVolume(volume);
+  if (!v) return "";
+  if (/^\d+$/.test(v) || ["上", "中", "下"].includes(v)) return `${v}巻`;
+  return volume!.trim();
+}
+
+// 書名＋巻（例：「進撃の巨人 12巻」）
+export function bookLabel(b: { title: string; volume?: string | null }): string {
+  const v = volumeLabel(b.volume);
+  return v ? `${b.title} ${v}` : b.title;
+}
+
+// 次の巻：「12」→「13」、「上」→「下」、「上」「中」「下」の3冊なら「中」は手で直す
+export function nextVolume(volume: string | null | undefined): string {
+  const v = normalizeVolume(volume);
+  if (/^\d+$/.test(v)) return String(Number(v) + 1);
+  if (v === "上") return "下";
+  if (v === "中") return "下";
+  return "";
+}
+
+export function sameBook(
+  a: { title: string; volume?: string | null },
+  b: { title: string; volume?: string | null },
+): boolean {
+  return normalizeTitle(a.title) === normalizeTitle(b.title) && normalizeVolume(a.volume) === normalizeVolume(b.volume);
 }
 
 export const QUESTION_TEMPLATES = [

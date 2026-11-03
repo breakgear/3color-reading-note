@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { RetryAllButton } from "@/components/RetryAllButton";
 import { RetryButton } from "@/components/RetryButton";
 import { confirmItem, deleteItem } from "@/lib/actions/inbox";
-import { COLOR_INFO, PEN_COLORS, type Highlight, type InboxItem } from "@/lib/domain";
+import { bookLabel, COLOR_INFO, PEN_COLORS, type Highlight, type InboxItem } from "@/lib/domain";
 import { requireUser } from "@/lib/supabase/server";
 
 export default async function InboxPage() {
@@ -15,10 +15,10 @@ export default async function InboxPage() {
       .select("*")
       .in("status", ["uploaded", "processing", "review", "error"])
       .order("created_at", { ascending: true }),
-    supabase.from("rn_books").select("id, title, status").order("updated_at", { ascending: false }),
+    supabase.from("rn_books").select("id, title, volume, status").order("updated_at", { ascending: false }),
   ]);
   const items = (itemsData ?? []) as InboxItem[];
-  const books = (booksData ?? []) as { id: string; title: string; status: string }[];
+  const books = (booksData ?? []) as { id: string; title: string; volume: string | null; status: string }[];
   const reading = books.filter((b) => b.status === "reading");
 
   const ids = items.map((i) => i.id);
@@ -48,7 +48,7 @@ export default async function InboxPage() {
           3色で印を付けたスクショ・写真・PDFを送ると、AIが文章と色を読み取ります。確認してから登録されます。
         </p>
 
-        <InboxUploader userId={userId} books={reading.map(({ id, title }) => ({ id, title }))} />
+        <InboxUploader userId={userId} books={reading.map((b) => ({ id: b.id, title: bookLabel(b) }))} />
 
         {items.length > 0 && (
           <h2 className="text-base font-bold">確認待ち（{items.length}件）</h2>
@@ -103,7 +103,7 @@ export default async function InboxPage() {
                       </option>
                       {books.map((b) => (
                         <option key={b.id} value={b.id}>
-                          {b.title}
+                          {bookLabel(b)}
                           {b.status === "finished" ? "（読了）" : ""}
                         </option>
                       ))}

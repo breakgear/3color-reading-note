@@ -1,7 +1,7 @@
 import { HighlightForm } from "@/components/HighlightForm";
 import { PageHeader } from "@/components/PageHeader";
 import { createHighlight } from "@/lib/actions/highlights";
-import { isPenColor } from "@/lib/domain";
+import { bookLabel, isPenColor } from "@/lib/domain";
 import { getBook } from "@/lib/queries";
 
 export default async function AddHighlightPage({ params, searchParams }: PageProps<"/books/[id]/add">) {
@@ -12,7 +12,7 @@ export default async function AddHighlightPage({ params, searchParams }: PagePro
   return (
     <main>
       <PageHeader title="記録を追加" backHref={`/books/${id}`} backLabel="本へ" />
-      <p className="truncate px-4 text-xs text-sub">『{book.title}』</p>
+      <p className="truncate px-4 text-xs text-sub">『{bookLabel(book)}』</p>
       {sp.saved && (
         <p role="status" className="mx-4 mt-3 rounded-xl bg-pen-green-tint px-4 py-2 text-sm font-semibold text-pen-green">
           保存しました。続けてどうぞ

@@ -3,7 +3,7 @@ import { ConfirmSubmit } from "@/components/ConfirmSubmit";
 import { HighlightForm } from "@/components/HighlightForm";
 import { PageHeader } from "@/components/PageHeader";
 import { deleteHighlight, updateHighlight } from "@/lib/actions/highlights";
-import type { Highlight } from "@/lib/domain";
+import { bookLabel, type Highlight } from "@/lib/domain";
 import { getBook } from "@/lib/queries";
 
 export default async function EditHighlightPage({ params }: PageProps<"/books/[id]/highlights/[hid]">) {
@@ -16,7 +16,7 @@ export default async function EditHighlightPage({ params }: PageProps<"/books/[i
   return (
     <main>
       <PageHeader title="記録を編集" backHref={`/books/${id}`} backLabel="本へ" />
-      <p className="truncate px-4 text-xs text-sub">『{book.title}』</p>
+      <p className="truncate px-4 text-xs text-sub">『{bookLabel(book)}』</p>
       <HighlightForm
         action={updateHighlight.bind(null, hid, id)}
         chapters={chapters}

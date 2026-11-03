@@ -9,6 +9,7 @@ import {
   formatLocation,
   isPenColor,
   PEN_COLORS,
+  volumeLabel,
   type Highlight,
   type PenColor,
 } from "@/lib/domain";
@@ -52,11 +53,19 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
 
       <div className="flex flex-col gap-4 px-4">
         <div>
-          <h1 className="text-xl leading-snug font-bold">{book.title}</h1>
-          <p className="mt-1 flex items-center gap-2 text-xs text-sub">
+          <h1 className="text-xl leading-snug font-bold">
+            {book.title}
+            {book.volume && <span className="ml-2 text-base">{volumeLabel(book.volume)}</span>}
+          </h1>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-sub">
             {book.author && <span>{book.author}</span>}
             <span className="rounded-full border border-line px-2 leading-5">{FORMAT_LABEL[book.format]}</span>
             {book.status === "finished" && <span className="font-bold text-ink">読了</span>}
+            <span className="flex-1" />
+            <Link href={`/books/new?from=${id}`} className="flex min-h-9 items-center gap-1 font-bold text-ink underline">
+              <IconPlus className="size-4" />
+              次の巻を登録
+            </Link>
           </p>
         </div>
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/supabase/server";
-import { text, type AnswerStatus, type BookFormat } from "@/lib/domain";
+import { sameBook, text, type AnswerStatus, type BookFormat } from "@/lib/domain";
 
 type ChapterInput = { id?: string; label: string; start_page: number | null };
 
@@ -35,10 +35,21 @@ export async function createBook(form: FormData) {
   const title = text(form, "title", 200);
   if (!title) throw new Error("書名を入れてください");
 
+  const volume = text(form, "volume", 20);
+
+  // 同じ書名・同じ巻の本がすでにあれば、新しく作らずにその本を開く
+  // （「登録」を2回押してしまったときの二重登録も、ここで防ぐ）
+  if (form.get("allow_duplicate") !== "on") {
+    const { data: mine } = await supabase.from("rn_books").select("id, title, volume");
+    const same = (mine ?? []).find((b) => sameBook(b, { title, volume }));
+    if (same) redirect(`/books/${same.id}`);
+  }
+
   const { data: book, error } = await supabase
     .from("rn_books")
     .insert({
       title,
+      volume,
       author: text(form, "author", 200),
       format: parseFormat(form.get("format")),
       question: text(form, "question", 500),
@@ -73,6 +84,7 @@ export async function updateBook(bookId: string, form: FormData) {
     .from("rn_books")
     .update({
       title,
+      volume: text(form, "volume", 20),
       author: text(form, "author", 200),
       format: parseFormat(form.get("format")),
       question: text(form, "question", 500),

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ColorCounts } from "@/components/ColorBadge";
 import { IconChevron, IconPlus, IconQuestion } from "@/components/icons";
 import { logout } from "@/app/login/actions";
-import { FORMAT_LABEL, formatDate, type Book, type PenColor } from "@/lib/domain";
+import { FORMAT_LABEL, formatDate, volumeLabel, type Book, type PenColor } from "@/lib/domain";
 import { requireUser } from "@/lib/supabase/server";
 
 type Row = Book & { highlights: { color: PenColor; status: string }[] };
@@ -90,7 +90,10 @@ export default async function ShelfPage({ searchParams }: PageProps<"/">) {
               <li key={b.id}>
                 <Link href={`/books/${b.id}`} className="card flex flex-col gap-2 p-4">
                   <div className="flex items-start gap-2">
-                    <span className="flex-1 text-base leading-snug font-bold">{b.title}</span>
+                    <span className="flex-1 text-base leading-snug font-bold">
+                      {b.title}
+                      {b.volume && <span className="ml-1.5 text-sm">{volumeLabel(b.volume)}</span>}
+                    </span>
                     <span className="shrink-0 rounded-full border border-line px-2 text-xs leading-5 text-sub">
                       {FORMAT_LABEL[b.format]}
                     </span>

@@ -16,6 +16,7 @@ export default async function EditBookPage({ params }: PageProps<"/books/[id]/ed
         submitLabel="保存"
         defaults={{
           title: book.title,
+          volume: book.volume,
           author: book.author,
           format: book.format,
           question: book.question,
