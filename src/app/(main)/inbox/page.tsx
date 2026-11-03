@@ -1,5 +1,6 @@
 import { InboxUploader } from "@/components/InboxUploader";
 import { PageHeader } from "@/components/PageHeader";
+import { RetryAllButton } from "@/components/RetryAllButton";
 import { RetryButton } from "@/components/RetryButton";
 import { confirmItem, deleteItem } from "@/lib/actions/inbox";
 import { COLOR_INFO, PEN_COLORS, type Highlight, type InboxItem } from "@/lib/domain";
@@ -36,6 +37,8 @@ export default async function InboxPage() {
     ? await supabase.storage.from("rn-inbox").createSignedUrls(imagePaths, 60 * 60)
     : { data: [] };
   const urlOf = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+  // まだ読み取れていないもの（設定前に送った・失敗した・途中で止まった）
+  const unread = items.filter((i) => i.status !== "review");
 
   return (
     <main>
@@ -50,6 +53,8 @@ export default async function InboxPage() {
         {items.length > 0 && (
           <h2 className="text-base font-bold">確認待ち（{items.length}件）</h2>
         )}
+
+        {unread.length > 0 && <RetryAllButton itemIds={unread.map((i) => i.id)} />}
 
         {items.map((item) => {
           const hs = pending.filter((h) => h.inbox_item_id === item.id);
@@ -70,7 +75,9 @@ export default async function InboxPage() {
                 )}
                 <div className="min-w-0 flex-1 text-[13px]">
                   <p className="truncate text-sub">{item.file_name}</p>
-                  {item.status === "processing" || item.status === "uploaded" ? (
+                  {item.status === "uploaded" ? (
+                    <p className="mt-1 font-bold">まだ読み取っていません</p>
+                  ) : item.status === "processing" ? (
                     <p className="mt-1 font-bold">読み取り中です…（終わらないときは「読み直す」）</p>
                   ) : item.status === "error" ? (
                     <p className="mt-1 font-bold text-pen-red">{item.error ?? "読み取りに失敗しました"}</p>

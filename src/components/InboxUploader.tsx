@@ -54,6 +54,7 @@ export function InboxUploader({
   const [bookId, setBookId] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
+  const [setupMsg, setSetupMsg] = useState<string | null>(null);
 
   const update = (key: string, state: string, tone: Job["tone"]) =>
     setJobs((js) => js.map((j) => (j.key === key ? { ...j, state, tone } : j)));
@@ -65,6 +66,8 @@ export function InboxUploader({
     const stamp = Date.now();
     setJobs(list.map((f, i) => ({ key: `${stamp}-${i}`, name: f.name, state: "待機中", tone: "run" })));
     setBusy(true);
+    setSetupMsg(null);
+    let setupError: string | null = null;
 
     for (const [i, file] of list.entries()) {
       const key = `${stamp}-${i}`;
@@ -103,6 +106,11 @@ export function InboxUploader({
           .single();
         if (insErr || !item) throw new Error(`登録できませんでした：${insErr?.message}`);
 
+        // 設定に問題があるとわかったら、残りは保存だけして、読み取りはあとで
+        if (setupError) {
+          update(key, "保存しました（読み取りは設定後）", "warn");
+          continue;
+        }
         update(key, "AIが読み取り中…", "run");
         const res = await fetch("/api/inbox/process", {
           method: "POST",
@@ -110,6 +118,11 @@ export function InboxUploader({
           body: JSON.stringify({ id: item.id }),
         });
         const json = await res.json().catch(() => ({}));
+        if (json.setup) {
+          setupError = json.error ?? "設定に問題があります";
+          update(key, "保存しました（読み取りは設定後）", "warn");
+          continue;
+        }
         if (!res.ok) throw new Error(json.error ?? "読み取りに失敗しました");
         update(key, json.count ? `${json.count}件見つかりました` : "印が見つかりませんでした", json.count ? "ok" : "warn");
       } catch (e) {
@@ -118,6 +131,7 @@ export function InboxUploader({
     }
 
     setBusy(false);
+    setSetupMsg(setupError);
     if (inputRef.current) inputRef.current.value = "";
     router.refresh();
   }
@@ -163,6 +177,16 @@ export function InboxUploader({
           3色で印を付けた画像を、まとめて選べます
         </span>
       </label>
+
+      {setupMsg && (
+        <p role="alert" className="rounded-xl bg-pen-red-tint px-3 py-2 text-[13px] leading-relaxed font-semibold text-pen-red">
+          {setupMsg}
+          <br />
+          <span className="font-normal text-ink">
+            画像は保存してあります。設定を直したら、下の「まとめて読み取る」を押してください。
+          </span>
+        </p>
+      )}
 
       {jobs.length > 0 && (
         <ul className="flex flex-col gap-1.5" aria-live="polite">

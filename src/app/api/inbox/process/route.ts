@@ -8,10 +8,10 @@ export const maxDuration = 60;
 
 function allowed(email: string) {
   const list = (process.env.ALLOWED_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
+    .split(/[,\s]+/)
+    .map((s) => s.replace(/["'<>]/g, "").trim().toLowerCase())
     .filter(Boolean);
-  return list.length === 0 || list.includes(email.toLowerCase());
+  return list.length === 0 || list.includes(email.trim().toLowerCase());
 }
 
 function toBase64(buf: ArrayBuffer) {
@@ -35,8 +35,23 @@ export async function POST(request: NextRequest) {
   const { data: auth } = await supabase.auth.getClaims();
   const userId = auth?.claims?.sub;
   const email = (auth?.claims?.email as string | undefined) ?? "";
-  if (!userId) return NextResponse.json({ error: "ログインしてください" }, { status: 401 });
-  if (!allowed(email)) return NextResponse.json({ error: "このアカウントでは使えません" }, { status: 403 });
+  if (!userId) return NextResponse.json({ error: "ログインしてください", setup: true }, { status: 401 });
+  // 設定の問題は、ファイルごとではなく画面の上にまとめて表示する
+  if (!allowed(email)) {
+    return NextResponse.json(
+      {
+        error: `ログイン中のメールアドレス（${email || "不明"}）が、Vercelの ALLOWED_EMAILS に入っていません`,
+        setup: true,
+      },
+      { status: 403 },
+    );
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: "AIのキー（ANTHROPIC_API_KEY）がVercelに設定されていません", setup: true },
+      { status: 503 },
+    );
+  }
 
   const body = await request.json().catch(() => ({}));
   const itemId = typeof body.id === "string" ? body.id : "";

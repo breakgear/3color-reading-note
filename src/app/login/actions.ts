@@ -16,10 +16,10 @@ async function siteOrigin() {
 
 function isAllowed(email: string) {
   const list = (process.env.ALLOWED_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
+    .split(/[,\s]+/)
+    .map((s) => s.replace(/["'<>]/g, "").trim().toLowerCase())
     .filter(Boolean);
-  return list.length === 0 || list.includes(email.toLowerCase());
+  return list.length === 0 || list.includes(email.trim().toLowerCase());
 }
 
 export async function login(form: FormData) {
