@@ -9,7 +9,7 @@ import { getBook } from "@/lib/queries";
 export default async function EditHighlightPage({ params }: PageProps<"/books/[id]/highlights/[hid]">) {
   const { id, hid } = await params;
   const { supabase, book, chapters } = await getBook(id);
-  const { data } = await supabase.from("highlights").select("*").eq("id", hid).eq("book_id", id).maybeSingle();
+  const { data } = await supabase.from("rn_highlights").select("*").eq("id", hid).eq("book_id", id).maybeSingle();
   if (!data) notFound();
   const h = data as Highlight;
 

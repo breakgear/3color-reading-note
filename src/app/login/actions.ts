@@ -4,9 +4,14 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-function back(mode: "login" | "signup", params: Record<string, string>): never {
+function back(mode: "login" | "signup" | "reset", params: Record<string, string>): never {
   const q = new URLSearchParams({ mode, ...params });
   redirect(`/login?${q.toString()}`);
+}
+
+async function siteOrigin() {
+  const h = await headers();
+  return h.get("origin") ?? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
 }
 
 function isAllowed(email: string) {
@@ -43,21 +48,54 @@ export async function signup(form: FormData) {
     back("signup", { error: "このメールアドレスでは登録できません" });
   }
 
-  const h = await headers();
-  const origin =
-    h.get("origin") ?? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
-
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: `${origin}/auth/callback` },
+    options: { emailRedirectTo: `${await siteOrigin()}/auth/callback` },
   });
-  if (error) back("signup", { error: `登録できませんでした：${error.message}` });
+  if (error) {
+    if (/already registered|already exists/i.test(error.message)) {
+      back("login", { message: "このメールアドレスは登録済みです。ログインするか、下の「パスワードを忘れた」から設定してください" });
+    }
+    back("signup", { error: `登録できませんでした：${error.message}` });
+  }
+
+  // すでに登録済みのアドレスだと、エラーにならず空の結果が返る
+  if (data.user && data.user.identities?.length === 0) {
+    back("login", { message: "このメールアドレスは登録済みです。ログインするか、下の「パスワードを忘れた」から設定してください" });
+  }
 
   // メール確認が不要な設定なら、そのままログイン済みになる
   if (data.session) redirect("/");
   back("login", { message: "確認メールを送りました。メールのリンクを押してからログインしてください" });
+}
+
+// パスワードを決める（忘れた・まだ決めていない）ためのメールを送る
+export async function requestPasswordReset(form: FormData) {
+  const email = String(form.get("email") ?? "").trim();
+  if (!email) back("reset", { error: "メールアドレスを入れてください" });
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${await siteOrigin()}/auth/callback?next=/auth/new-password`,
+  });
+  if (error) back("reset", { error: `送れませんでした：${error.message}` });
+  back("login", {
+    message: "メールを送りました。このブラウザでメールのリンクを開き、新しいパスワードを決めてください",
+  });
+}
+
+export async function setNewPassword(form: FormData) {
+  const password = String(form.get("password") ?? "");
+  if (password.length < 8) redirect("/auth/new-password?error=1");
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    back("reset", { error: "パスワードを変更できませんでした。もう一度メールを送ってください" });
+  }
+  redirect("/");
 }
 
 export async function logout() {

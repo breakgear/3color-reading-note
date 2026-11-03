@@ -10,11 +10,11 @@ export default async function InboxPage() {
 
   const [{ data: itemsData }, { data: booksData }] = await Promise.all([
     supabase
-      .from("inbox_items")
+      .from("rn_inbox_items")
       .select("*")
       .in("status", ["uploaded", "processing", "review", "error"])
       .order("created_at", { ascending: true }),
-    supabase.from("books").select("id, title, status").order("updated_at", { ascending: false }),
+    supabase.from("rn_books").select("id, title, status").order("updated_at", { ascending: false }),
   ]);
   const items = (itemsData ?? []) as InboxItem[];
   const books = (booksData ?? []) as { id: string; title: string; status: string }[];
@@ -23,7 +23,7 @@ export default async function InboxPage() {
   const ids = items.map((i) => i.id);
   const { data: hData } = ids.length
     ? await supabase
-        .from("highlights")
+        .from("rn_highlights")
         .select("*")
         .in("inbox_item_id", ids)
         .eq("status", "pending")
@@ -33,7 +33,7 @@ export default async function InboxPage() {
 
   const imagePaths = items.filter((i) => i.mime_type.startsWith("image/")).map((i) => i.storage_path);
   const { data: signed } = imagePaths.length
-    ? await supabase.storage.from("inbox").createSignedUrls(imagePaths, 60 * 60)
+    ? await supabase.storage.from("rn-inbox").createSignedUrls(imagePaths, 60 * 60)
     : { data: [] };
   const urlOf = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
 

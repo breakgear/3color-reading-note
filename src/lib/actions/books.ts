@@ -36,7 +36,7 @@ export async function createBook(form: FormData) {
   if (!title) throw new Error("書名を入れてください");
 
   const { data: book, error } = await supabase
-    .from("books")
+    .from("rn_books")
     .insert({
       title,
       author: text(form, "author", 200),
@@ -49,7 +49,7 @@ export async function createBook(form: FormData) {
 
   const chapters = parseChapters(form);
   if (chapters.length) {
-    const { error: chErr } = await supabase.from("chapters").insert(
+    const { error: chErr } = await supabase.from("rn_chapters").insert(
       chapters.map((c, i) => ({
         book_id: book.id,
         label: c.label,
@@ -70,7 +70,7 @@ export async function updateBook(bookId: string, form: FormData) {
   if (!title) throw new Error("書名を入れてください");
 
   const { error } = await supabase
-    .from("books")
+    .from("rn_books")
     .update({
       title,
       author: text(form, "author", 200),
@@ -82,22 +82,22 @@ export async function updateBook(bookId: string, form: FormData) {
 
   // 目次：残った章は更新、新しい章は追加、消した章は削除（記録は「章なし」に戻る）
   const chapters = parseChapters(form);
-  const { data: existing } = await supabase.from("chapters").select("id").eq("book_id", bookId);
+  const { data: existing } = await supabase.from("rn_chapters").select("id").eq("book_id", bookId);
   const keepIds = new Set(chapters.map((c) => c.id).filter(Boolean) as string[]);
   const removeIds = (existing ?? []).map((c) => c.id).filter((id) => !keepIds.has(id));
   if (removeIds.length) {
-    await supabase.from("chapters").delete().in("id", removeIds);
+    await supabase.from("rn_chapters").delete().in("id", removeIds);
   }
   for (const [i, c] of chapters.entries()) {
     if (c.id) {
       await supabase
-        .from("chapters")
+        .from("rn_chapters")
         .update({ label: c.label, start_page: c.start_page, sort_order: i })
         .eq("id", c.id)
         .eq("book_id", bookId);
     } else {
       await supabase
-        .from("chapters")
+        .from("rn_chapters")
         .insert({ book_id: bookId, label: c.label, start_page: c.start_page, sort_order: i });
     }
   }
@@ -109,7 +109,7 @@ export async function updateBook(bookId: string, form: FormData) {
 
 export async function deleteBook(bookId: string) {
   const { supabase } = await requireUser();
-  const { error } = await supabase.from("books").delete().eq("id", bookId);
+  const { error } = await supabase.from("rn_books").delete().eq("id", bookId);
   if (error) throw new Error(`削除できませんでした：${error.message}`);
   revalidatePath("/");
   redirect("/");
@@ -122,13 +122,13 @@ export async function finishBook(bookId: string, form: FormData) {
     a === "found" || a === "partial" || a === "not_yet" ? a : null;
 
   const { data: current } = await supabase
-    .from("books")
+    .from("rn_books")
     .select("finished_at")
     .eq("id", bookId)
     .single();
 
   const { error } = await supabase
-    .from("books")
+    .from("rn_books")
     .update({
       status: "finished",
       finished_at: current?.finished_at ?? new Date().toISOString(),
@@ -149,7 +149,7 @@ export async function finishBook(bookId: string, form: FormData) {
 
 export async function reopenBook(bookId: string) {
   const { supabase } = await requireUser();
-  await supabase.from("books").update({ status: "reading" }).eq("id", bookId);
+  await supabase.from("rn_books").update({ status: "reading" }).eq("id", bookId);
   revalidatePath("/");
   revalidatePath(`/books/${bookId}`);
   redirect(`/books/${bookId}`);

@@ -40,22 +40,22 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const itemId = typeof body.id === "string" ? body.id : "";
-  const { data: itemData } = await supabase.from("inbox_items").select("*").eq("id", itemId).maybeSingle();
+  const { data: itemData } = await supabase.from("rn_inbox_items").select("*").eq("id", itemId).maybeSingle();
   if (!itemData) return NextResponse.json({ error: "見つかりません" }, { status: 404 });
   const item = itemData as InboxItem;
 
-  await supabase.from("inbox_items").update({ status: "processing", error: null }).eq("id", item.id);
+  await supabase.from("rn_inbox_items").update({ status: "processing", error: null }).eq("id", item.id);
 
   try {
     // 前回の読み取り結果（未確認のもの）は消してやり直す
-    await supabase.from("highlights").delete().eq("inbox_item_id", item.id).eq("status", "pending");
+    await supabase.from("rn_highlights").delete().eq("inbox_item_id", item.id).eq("status", "pending");
 
-    const { data: file, error: dlErr } = await supabase.storage.from("inbox").download(item.storage_path);
+    const { data: file, error: dlErr } = await supabase.storage.from("rn-inbox").download(item.storage_path);
     if (dlErr || !file) throw new Error("ファイルを読み込めませんでした");
 
     const [{ data: booksData }, { data: chaptersData }] = await Promise.all([
-      supabase.from("books").select("id, title, author").eq("status", "reading"),
-      supabase.from("chapters").select("*").order("sort_order"),
+      supabase.from("rn_books").select("id, title, author").eq("status", "reading"),
+      supabase.from("rn_chapters").select("*").order("sort_order"),
     ]);
     const chapters = (chaptersData ?? []) as Chapter[];
     const books: CandidateBook[] = (booksData ?? []).map((b) => ({
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       const known = books.find((b) => b.id === item.book_id);
       if (known) fixedBook = known;
       else {
-        const { data: b } = await supabase.from("books").select("id, title, author").eq("id", item.book_id).maybeSingle();
+        const { data: b } = await supabase.from("rn_books").select("id, title, author").eq("id", item.book_id).maybeSingle();
         if (b) fixedBook = { ...b, chapters: chapters.filter((c) => c.book_id === b.id).map((c) => c.label) };
       }
     }
@@ -114,12 +114,12 @@ export async function POST(request: NextRequest) {
           source: "screenshot" as const,
         };
       });
-      const { error: insErr } = await supabase.from("highlights").insert(rows);
+      const { error: insErr } = await supabase.from("rn_highlights").insert(rows);
       if (insErr) throw new Error(`保存できませんでした：${insErr.message}`);
     }
 
     await supabase
-      .from("inbox_items")
+      .from("rn_inbox_items")
       .update({
         status: result.highlights.length ? "review" : "error",
         book_id: bookId,
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, count: result.highlights.length });
   } catch (e) {
     const message = e instanceof Error ? e.message : "読み取りに失敗しました";
-    await supabase.from("inbox_items").update({ status: "error", error: message.slice(0, 500) }).eq("id", item.id);
+    await supabase.from("rn_inbox_items").update({ status: "error", error: message.slice(0, 500) }).eq("id", item.id);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -6,8 +6,8 @@ import type { Book, Chapter, Highlight } from "@/lib/domain";
 export async function getBook(bookId: string) {
   const { supabase } = await requireUser();
   const [{ data: book }, { data: chapters }] = await Promise.all([
-    supabase.from("books").select("*").eq("id", bookId).maybeSingle(),
-    supabase.from("chapters").select("*").eq("book_id", bookId).order("sort_order"),
+    supabase.from("rn_books").select("*").eq("id", bookId).maybeSingle(),
+    supabase.from("rn_chapters").select("*").eq("book_id", bookId).order("sort_order"),
   ]);
   if (!book) notFound();
   return { supabase, book: book as Book, chapters: (chapters ?? []) as Chapter[] };
@@ -16,7 +16,7 @@ export async function getBook(bookId: string) {
 export async function getConfirmedHighlights(bookId: string) {
   const { supabase } = await requireUser();
   const { data } = await supabase
-    .from("highlights")
+    .from("rn_highlights")
     .select("*")
     .eq("book_id", bookId)
     .eq("status", "confirmed")

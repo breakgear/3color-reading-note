@@ -75,7 +75,7 @@ export function InboxUploader({
 
         update(key, "準備中…", "run");
         const hash = await sha256(await file.arrayBuffer());
-        const { data: dup } = await supabase.from("inbox_items").select("id").eq("file_hash", hash).maybeSingle();
+        const { data: dup } = await supabase.from("rn_inbox_items").select("id").eq("file_hash", hash).maybeSingle();
         if (dup) {
           update(key, "取り込み済みのファイルです", "warn");
           continue;
@@ -85,12 +85,12 @@ export function InboxUploader({
         const path = `${userId}/${hash}.${prepared.ext}`;
         update(key, "送信中…", "run");
         const { error: upErr } = await supabase.storage
-          .from("inbox")
+          .from("rn-inbox")
           .upload(path, prepared.blob, { contentType: prepared.type, upsert: false });
         if (upErr && !/exists|Duplicate/i.test(upErr.message)) throw new Error(`送信できませんでした：${upErr.message}`);
 
         const { data: item, error: insErr } = await supabase
-          .from("inbox_items")
+          .from("rn_inbox_items")
           .insert({
             storage_path: path,
             file_name: file.name.slice(0, 200),

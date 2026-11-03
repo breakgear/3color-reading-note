@@ -20,14 +20,18 @@
 
 ## 公開までの手順
 
-### 1. Supabase
+### 1. Supabase（既存の Investment Dashboard プロジェクトに同居）
 
-1. 新しいプロジェクトを作る（Region は Singapore がおすすめ）
+このアプリが作るものは、すべて名前が `rn_`（画像置き場は `rn-inbox`）で始まります。ほかのアプリのテーブルや設定には触れません。
+
+1. Investment Dashboard のプロジェクトを開く
 2. **SQL Editor** を開き、`supabase/schema.sql` の中身を全部貼り付けて **Run**
 3. **Authentication → URL Configuration**
-   - Site URL：VercelのURL（例 `https://3color-reading-note.vercel.app`）
-   - Redirect URLs：`https://3color-reading-note.vercel.app/**` を追加
+   - Site URL は**変えない**（Investment Dashboard が使っているため）
+   - Redirect URLs に `https://（VercelのURL）/**` を**追加**する
 4. **Project Settings → API Keys** で「Project URL」と「Publishable key」を確認
+
+ログインのアカウントは Investment Dashboard と共通です。パスワードがない・忘れた場合は、ログイン画面の「パスワードを忘れた・まだ決めていない」から設定できます。
 
 ### 2. Vercel
 
@@ -35,10 +39,11 @@
 2. Environment Variables に `.env.example` の項目を入れる
 3. Deploy
 
-### 3. 最初の登録と、他人を入れない設定
+### 3. ログインと、他人を入れない設定
 
-1. 公開したURLを開き「はじめての登録」で自分のアカウントを作る（確認メールのリンクを押す）
-2. Supabase の **Authentication → Sign In / Providers** で **Allow new users to sign up** をオフにする
+1. 公開したURLを開き、Investment Dashboard と同じメールアドレスでログインする
+2. 環境変数 `ALLOWED_EMAILS` に自分のメールアドレスだけを入れておく（登録とAIの読み取りを本人に限定）
+3. 「新規登録を止める」設定（Allow new users to sign up）はプロジェクト全体に効くので、Investment Dashboard に影響がないか確かめてから変える
 
 ## 手元で動かす（開発する人向け）
 

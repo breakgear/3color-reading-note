@@ -22,7 +22,7 @@ async function resolveChapter(
 ): Promise<string | null> {
   if (choice && choice !== "auto" && choice !== "none") return String(choice);
   if (choice === "none") return null;
-  const { data } = await supabase.from("chapters").select("*").eq("book_id", bookId);
+  const { data } = await supabase.from("rn_chapters").select("*").eq("book_id", bookId);
   return chapterForPage((data ?? []) as Chapter[], page)?.id ?? null;
 }
 
@@ -48,7 +48,7 @@ export async function createHighlight(bookId: string, form: FormData) {
   const chapterId = await resolveChapter(supabase, bookId, form.get("chapter_id"), f.page);
 
   const { error } = await supabase
-    .from("highlights")
+    .from("rn_highlights")
     .insert({ ...f, book_id: bookId, chapter_id: chapterId, status: "confirmed", source: "manual" });
   if (error) throw new Error(`保存できませんでした：${error.message}`);
 
@@ -66,7 +66,7 @@ export async function updateHighlight(id: string, bookId: string, form: FormData
   const chapterId = await resolveChapter(supabase, bookId, form.get("chapter_id"), f.page);
 
   const { error } = await supabase
-    .from("highlights")
+    .from("rn_highlights")
     .update({ ...f, chapter_id: chapterId })
     .eq("id", id);
   if (error) throw new Error(`保存できませんでした：${error.message}`);
@@ -78,7 +78,7 @@ export async function updateHighlight(id: string, bookId: string, form: FormData
 
 export async function deleteHighlight(id: string, bookId: string) {
   const { supabase } = await requireUser();
-  await supabase.from("highlights").delete().eq("id", id);
+  await supabase.from("rn_highlights").delete().eq("id", id);
   revalidatePath("/");
   revalidatePath(`/books/${bookId}`);
   revalidatePath("/review");
@@ -89,7 +89,7 @@ export async function deleteHighlight(id: string, bookId: string) {
 export async function saveActionResult(id: string, form: FormData) {
   const { supabase } = await requireUser();
   await supabase
-    .from("highlights")
+    .from("rn_highlights")
     .update({
       action_done: form.get("action_done") === "on",
       action_result: text(form, "action_result", 1000),

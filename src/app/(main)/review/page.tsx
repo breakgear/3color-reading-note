@@ -19,22 +19,22 @@ export default async function ReviewPage() {
 
   const [{ data: actionsData }, { data: redsData }, { data: finishedData }] = await Promise.all([
     supabase
-      .from("highlights")
-      .select("*, books(id, title)")
+      .from("rn_highlights")
+      .select("*, books:rn_books(id, title)")
       .eq("status", "confirmed")
       .not("action", "is", null)
       .order("action_done", { ascending: true })
       .order("created_at", { ascending: false })
       .limit(50),
     supabase
-      .from("highlights")
-      .select("*, books(id, title)")
+      .from("rn_highlights")
+      .select("*, books:rn_books(id, title)")
       .eq("status", "confirmed")
       .eq("color", "red")
       .order("created_at", { ascending: false })
       .limit(200),
     supabase
-      .from("books")
+      .from("rn_books")
       .select("*")
       .eq("status", "finished")
       .order("finished_at", { ascending: false })

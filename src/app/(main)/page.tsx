@@ -13,14 +13,14 @@ export default async function ShelfPage({ searchParams }: PageProps<"/">) {
   const { supabase, email } = await requireUser();
 
   const { data } = await supabase
-    .from("books")
-    .select("*, highlights(color, status)")
+    .from("rn_books")
+    .select("*, highlights:rn_highlights(color, status)")
     .eq("status", tab)
     .order(tab === "finished" ? "finished_at" : "updated_at", { ascending: false });
   const books = (data ?? []) as Row[];
 
   const { count: openActions } = await supabase
-    .from("highlights")
+    .from("rn_highlights")
     .select("id", { count: "exact", head: true })
     .eq("status", "confirmed")
     .not("action", "is", null)
